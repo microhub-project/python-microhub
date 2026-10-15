@@ -102,6 +102,7 @@ for mac in macs:
 
 instancias = {}       
 componentesPorInstancia = {}
+data = 0
 
 for mac in macsLista:
     cursor.execute(
@@ -158,10 +159,18 @@ jsonFinal = {
 
 nomeGold = nomeEmpresa.lower().replace(" ", "_")
 file_key3 = f"03-client-gold/{nomeGold}.json"
+file_key4 = f"03-client-gold/{nomeGold}_{timestamp_arquivo}.json"
 
 s3_client.put_object(
     Bucket=bucket_name,
     Key=file_key3,
+    Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
+    ContentType="application/json",
+)
+
+s3_client.put_object(
+    Bucket=bucket_name,
+    Key=file_key4,
     Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
     ContentType="application/json",
 )
