@@ -96,6 +96,6 @@ def store(data):
 
 with open('data.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
-        writer.writerow(["user", "cpu_percent", "cpu_frequency", "ram_percent", "swap_memory_percent", "processes_qtd", "processes_zombies_percent", "upload_speed", "download_speed", "disk", "timestamp"])
+        writer.writerow(["user", "cpu_percent", "cpu_frequency", "ram_percent", "swap_memory_percent", "processes_qtd", "processes_zombies_percent", "upload_traffic", "download_traffic", "disk", "timestamp"])
 
 capture()
