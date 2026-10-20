@@ -78,20 +78,26 @@ s3_client.put_object(
 #==========================================================================================================================================================================
 
 cursor.execute(
-    "SELECT e.id, e.nome_fantasia FROM empresa e "
-    "JOIN microsservico mc ON e.id = mc.empresa_id "
-    "JOIN instancia i ON i.microsservico_id = mc.id "
+    "SELECT BIN_TO_UUID(e.uuid), e.nome_fantasia "
+    "FROM empresa e "
+    "JOIN microsservico mc ON mc.empresa_uuid = e.uuid "
+    "JOIN instancia i ON i.microsservico_uuid = mc.uuid "
     f"WHERE i.endereco_mac = '{nome_arquivo}'"
 )
 
+print(nome_arquivo)
+
 empresa = cursor.fetchone()
+
+print(empresa)
 
 empresaId, nomeEmpresa = empresa
 
 cursor.execute(
-    "SELECT i.endereco_mac FROM instancia i "
-    "JOIN microsservico mc ON mc.id = i.microsservico_id "
-    f"WHERE mc.empresa_id = {empresaId}"
+    "SELECT i.endereco_mac "
+    "FROM instancia i "
+    "JOIN microsservico mc ON mc.uuid = i.microsservico_uuid "
+    f"WHERE mc.empresa_uuid = UUID_TO_BIN('{empresaId}')"
 )
 macsLista = []
 
@@ -106,9 +112,10 @@ data = 0
 
 for mac in macsLista:
     cursor.execute(
-        "SELECT c.nome FROM instancia_tem_componente ic "
-        "JOIN componente c ON c.id = ic.componente_id "
-        "JOIN instancia i ON i.id = ic.instancia_id "
+        "SELECT c.nome "
+        "FROM instancia_tem_componente ic "
+        "JOIN componente c ON c.uuid = ic.componente_uuid "
+        "JOIN instancia i ON i.uuid = ic.instancia_uuid "
         f"WHERE i.endereco_mac = '{mac}'"
     )
 
