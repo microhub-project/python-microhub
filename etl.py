@@ -85,11 +85,7 @@ cursor.execute(
     f"WHERE i.endereco_mac = '{nome_arquivo}'"
 )
 
-print(nome_arquivo)
-
 empresa = cursor.fetchone()
-
-print(empresa)
 
 empresaId, nomeEmpresa = empresa
 
