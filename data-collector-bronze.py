@@ -1,11 +1,13 @@
-import psutil
-import time
+import psutil, time, csv, boto3, os
 from datetime import datetime
 from getmac import get_mac_address
-import csv
+from io import StringIO
+from dotenv import load_dotenv
+
+mac_address = get_mac_address().upper().replace(':', "_")
 
 def capture():
-    user = get_mac_address()
+    user = mac_address
     last_net = psutil.net_io_counters()
     last_time = time.time()
     
@@ -58,6 +60,8 @@ def capture():
         store([user, cpu_percent, cpu_frequency, ram_percent, swap_memory_percent,processes_qtd,processes_zombies_percent, upload_speed, download_speed, disk, timestamp])
 
         time.sleep(9)
+        
+    save(f'{mac_address}.csv')
 
 def exhibit(data):
     line_user = f"Endereço MAC do dispositivo: {data[0]}"
@@ -89,12 +93,30 @@ def exhibit(data):
     """)
 
 def store(data):
-    with open('data.csv', 'a', newline='') as csvfile:
+    with open(f'{mac_address}.csv', 'a', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
         writer.writerow([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10]])
 
-with open('data.csv', 'w', newline='') as csvfile:
+with open(f'{mac_address}.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
         writer.writerow(["user", "cpu_percent", "cpu_frequency", "ram_percent", "swap_memory_percent", "processes_qtd", "processes_zombies_percent", "upload_speed", "download_speed", "disk", "timestamp"])
+
+def save(file):
+    load_dotenv()
+
+    session = boto3.Session(
+        aws_access_key_id=os.getenv("aws_access_key_id"),
+        aws_secret_access_key=os.getenv("aws_secret_access_key"),
+        aws_session_token=os.getenv("aws_session_token"),
+        region_name="us-east-1",
+    )
+
+    s3_client = session.client("s3")
+    bucket_name = "microhub-project-bucket-lucas"
+    
+    csv_buffer = StringIO()
+    
+    file_name = f"01-raw-bronze/{file}"
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 capture()
