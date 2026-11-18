@@ -1,6 +1,6 @@
 import pandas as pd 
 from dotenv import load_dotenv
-import os, io, boto3, ast, mysql.connector, json
+import os, io, boto3, ast, pymysql, json
 from io import StringIO
 
 load_dotenv()
@@ -14,7 +14,7 @@ session = boto3.Session(
     aws_session_token=os.getenv("aws_session_token"),
     region_name="us-east-1",
 )
-conexao = mysql.connector.connect(
+conexao = pymysql.connect(
     host=os.getenv("host"),
     user=os.getenv("user"),
     password=os.getenv("password"),
@@ -108,7 +108,7 @@ data = 0
 
 for mac in macsLista:
     cursor.execute(
-        "SELECT c.nome "
+        "SELECT c.nome_tecnico "
         "FROM instancia_tem_componente ic "
         "JOIN componente c ON c.uuid = ic.componente_uuid "
         "JOIN instancia i ON i.uuid = ic.instancia_uuid "
