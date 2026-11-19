@@ -34,48 +34,52 @@ def formatMACAddress(mac_address):
 
 def dataCleaning(mac_address):
     file_key1 = f"01-raw-bronze/{mac_address}.csv"
-    response = s3_client.get_object(Bucket=bucket_name, Key=file_key1)
+    
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=file_key1)
 
-    df_collect = pd.read_csv(io.BytesIO(response["Body"].read()), sep=";", low_memory=False)
+        df_collect = pd.read_csv(io.BytesIO(response["Body"].read()), sep=";", low_memory=False)
 
-    df_noNa = df_collect.dropna()
+        df_noNa = df_collect.dropna()
 
-    df_collect["cpu_percent"] = df_collect["cpu_percent"].fillna(df_noNa["cpu_percent"].mean())
-    df_collect["cpu_frequency"] = df_collect["cpu_frequency"].fillna(df_noNa["cpu_frequency"].mean())
-    df_collect["ram_percent"] = df_collect["ram_percent"].fillna(df_noNa["ram_percent"].mean())
-    df_collect["swap_memory_percent"] = df_collect["swap_memory_percent"].fillna(df_noNa["swap_memory_percent"].mean())
-    df_collect["upload_speed"] = df_collect["upload_speed"].fillna(round(df_noNa["upload_speed"].mean(), 0))
-    df_collect["download_speed"] = df_collect["download_speed"].fillna(df_noNa["download_speed"].mean())
-    df_collect["disk"] = df_collect["disk"].fillna(df_noNa["disk"].mean())
+        df_collect["cpu_percent"] = df_collect["cpu_percent"].fillna(df_noNa["cpu_percent"].mean())
+        df_collect["cpu_frequency"] = df_collect["cpu_frequency"].fillna(df_noNa["cpu_frequency"].mean())
+        df_collect["ram_percent"] = df_collect["ram_percent"].fillna(df_noNa["ram_percent"].mean())
+        df_collect["swap_memory_percent"] = df_collect["swap_memory_percent"].fillna(df_noNa["swap_memory_percent"].mean())
+        df_collect["upload_speed"] = df_collect["upload_speed"].fillna(round(df_noNa["upload_speed"].mean(), 0))
+        df_collect["download_speed"] = df_collect["download_speed"].fillna(df_noNa["download_speed"].mean())
+        df_collect["disk"] = df_collect["disk"].fillna(df_noNa["disk"].mean())
 
-    df_collect["cpu_frequency"] = round((df_collect["cpu_frequency"] / 1000), 2)
+        df_collect["cpu_frequency"] = round((df_collect["cpu_frequency"] / 1000), 2)
 
-    df_collect["disk"] = round((df_collect["disk"] / (1024 ** 3)), 2)
+        df_collect["disk"] = round((df_collect["disk"] / (1024 ** 3)), 2)
 
-    df_collect["processes_qtd"] = df_collect["processes_qtd"].apply(ast.literal_eval)
+        df_collect["processes_qtd"] = df_collect["processes_qtd"].apply(ast.literal_eval)
 
-    df_collect["processes_qtd"] = df_collect["processes_qtd"].str.len()
+        df_collect["processes_qtd"] = df_collect["processes_qtd"].str.len()
 
-    df_collect["timestamp"] = df_collect["timestamp"].apply(pd.to_datetime, errors="coerce")
+        df_collect["timestamp"] = df_collect["timestamp"].apply(pd.to_datetime, errors="coerce")
 
-    nome_arquivo = df_collect.loc[0, "user"]
+        nome_arquivo = df_collect.loc[0, "user"]
 
-    timestamp_arquivo = df_collect.loc[0, "timestamp"]
+        timestamp_arquivo = df_collect.loc[0, "timestamp"]
 
-    csv_buffer = StringIO()
-    df_collect.to_csv(csv_buffer, index=False)
+        csv_buffer = StringIO()
+        df_collect.to_csv(csv_buffer, index=False)
 
-    file_name = f"02-trusted-silver/{nome_arquivo}_{timestamp_arquivo}.csv"
+        file_name = f"02-trusted-silver/{nome_arquivo}_{timestamp_arquivo}.csv"
 
-    file_nameAtt = f"02-trusted-silver/{nome_arquivo}.csv"
+        file_nameAtt = f"02-trusted-silver/{nome_arquivo}.csv"
 
-    s3_client.put_object(
-        Bucket=bucket_name, Key=file_nameAtt, Body=csv_buffer.getvalue()
-    )
+        s3_client.put_object(
+            Bucket=bucket_name, Key=file_nameAtt, Body=csv_buffer.getvalue()
+        )
 
-    s3_client.put_object(
-        Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue()
-    )
+        s3_client.put_object(
+            Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue()
+        )
+    except:
+        print("Não foram encontradas leituras da instância de endereço MAC ", mac_address)
 
 
 cursor.execute(
