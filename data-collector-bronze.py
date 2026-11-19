@@ -112,7 +112,7 @@ def save(file):
     )
 
     s3_client = session.client("s3")
-    bucket_name = "microhub-project-bucket-lucas"
+    bucket_name = os.getenv("bucket")
     
     csv_buffer = StringIO()
     

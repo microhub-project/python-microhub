@@ -23,7 +23,7 @@ conexao = pymysql.connect(
 
 cursor = conexao.cursor()
 s3_client = session.client("s3")
-bucket_name = "microhub-project-bucket"
+bucket_name = os.getenv("bucket")
 
 #==========================================================================================================================================================================
 #BRONZE2SILVER
