@@ -8,6 +8,7 @@ load_dotenv()
 #========================================================================================================================================================================
 #CONFIG
 #========================================================================================================================================================================
+
 session = boto3.Session(
     aws_access_key_id=os.getenv("aws_access_key_id"),
     aws_secret_access_key=os.getenv("aws_secret_access_key"),
@@ -34,6 +35,71 @@ def tupleToString(mac_address):
 
 def stringToMac(mac_address):
     return mac_address.upper().replace('_', ':')
+
+# ==========================================================================================================================================================================
+# HISTÓRICO
+# ==========================================================================================================================================================================
+
+def getHistoricalFile(nome_empresa):
+    file_key = f"03-client-gold/{nome_empresa}_historical.json"
+    
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+        return response
+    except:
+        return None
+    
+historico_por_empresa = {}
+
+def createHistoricalFile(nome_empresa, dados_empresa):
+    historico_por_empresa = {
+        "empresa": nome_empresa,
+        "instancias": []
+    }
+    
+    for instancia in dados_empresa["instancias"]:
+        cursor.execute(
+            "SELECT t.nome, t.cpu, t.ram, t.custo_computacao "
+            "FROM tipo t JOIN instancia i ON t.uuid = i.tipo_uuid "
+            "WHERE i.endereco_mac = %s;",
+            (instancia["mac_address"],)
+        )
+        tipo = cursor.fetchone()
+        
+        nome, cpu, ram, custo_computacao = tipo
+        
+        leitura = instancia.copy()
+        mac_address = leitura.pop("mac_address")
+        
+        leitura["tipo"] = {
+            "nome": str(nome),
+            "cpu": int(cpu),
+            "ram": float(ram),
+            "custo_computacao": float(custo_computacao)
+        }
+        
+        nova_instancia = {
+            "mac_address": mac_address,
+            "leituras": [leitura]
+        }
+        
+        historico_por_empresa["instancias"].append(nova_instancia)
+        
+    nome_arquivo = nome_empresa.lower().replace(" ", "_")
+        
+    file_key = f"03-client-gold/{nome_arquivo}_historical.json"
+        
+    s3_client.put_object(
+        Bucket=bucket_name,
+        Key=file_key,
+        Body=json.dumps(historico_por_empresa, ensure_ascii=False, indent=4).encode("utf-8"),
+        ContentType="application/json",
+    )
+    
+def addToHistoricalFile(nome_empresa, arquivo):
+    file_key = f"03-client-gold/{nome_empresa}_historical.json"
+    
+    print("JÁ TEM O ARQUIVO NO BUCKET")
 
 #==========================================================================================================================================================================
 #BRONZE2SILVER
@@ -175,6 +241,13 @@ def uploadToGold():
             Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
             ContentType="application/json",
         )
+        
+        response = getHistoricalFile(nomeGold)
+        
+        if response:
+            addToHistoricalFile(nomeGold, response)
+        else:
+            createHistoricalFile(nomeEmpresa, dados)
     
 # ==========================================================================================================================================================================
 # EXECUÇÃO
