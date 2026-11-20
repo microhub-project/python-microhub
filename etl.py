@@ -71,18 +71,10 @@ def b2s(mac_address):
         
         nome_arquivo = macToString(nome_arquivo)
 
-        timestamp_arquivo = df_collect.loc[0, "timestamp"]
-
         csv_buffer = StringIO()
         df_collect.to_csv(csv_buffer, index=False)
 
-        file_name = f"02-trusted-silver/{nome_arquivo}_{timestamp_arquivo}.csv"
-
-        file_nameAtt = f"02-trusted-silver/{nome_arquivo}.csv"
-
-        s3_client.put_object(
-            Bucket=bucket_name, Key=file_nameAtt, Body=csv_buffer.getvalue()
-        )
+        file_name = f"02-trusted-silver/{nome_arquivo}.csv"
 
         s3_client.put_object(
             Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue()
@@ -168,8 +160,6 @@ def uploadToGold():
         for componente, valores in dados["componentesPorInstancia"].items():
             mediasGerais[componente] = round(sum(valores) / len(valores), 2)
 
-        ultima_data = dados["instancias"][-1]["timestamp"]
-
         jsonFinal = {
             "empresa": nomeEmpresa,
             "instancias": dados["instancias"],
@@ -178,18 +168,10 @@ def uploadToGold():
 
         nomeGold = nomeEmpresa.lower().replace(" ", "_")
         file_key3 = f"03-client-gold/{nomeGold}.json"
-        file_key4 = f"03-client-gold/{nomeGold}_{ultima_data}.json"
 
         s3_client.put_object(
             Bucket=bucket_name,
             Key=file_key3,
-            Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
-            ContentType="application/json",
-        )
-
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=file_key4,
             Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
             ContentType="application/json",
         )
