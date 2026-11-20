@@ -45,7 +45,8 @@ def getHistoricalFile(nome_empresa):
     
     try:
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-        return response
+        conteudo = response["Body"].read().decode("utf-8")
+        return json.loads(conteudo)
     except:
         return None
     
@@ -96,10 +97,48 @@ def createHistoricalFile(nome_empresa, dados_empresa):
         ContentType="application/json",
     )
     
-def addToHistoricalFile(nome_empresa, arquivo):
+def addToHistoricalFile(nome_empresa, dados_empresa, arquivo):
     file_key = f"03-client-gold/{nome_empresa}_historical.json"
     
-    print("JÁ TEM O ARQUIVO NO BUCKET")
+    instancias_existentes = {
+        item["mac_address"]: item for item in arquivo["instancias"]
+    }
+    
+    for instancia in dados_empresa["instancias"]:
+        cursor.execute(
+            "SELECT t.nome, t.cpu, t.ram, t.custo_computacao "
+            "FROM tipo t JOIN instancia i ON t.uuid = i.tipo_uuid "
+            "WHERE i.endereco_mac = %s;",
+            (instancia["mac_address"],)
+        )
+        tipo = cursor.fetchone()
+        
+        nome, cpu, ram, custo_computacao = tipo
+        
+        leitura = instancia.copy()
+        mac_address = leitura.pop("mac_address")
+        
+        leitura["tipo"] = {
+            "nome": str(nome),
+            "cpu": int(cpu),
+            "ram": float(ram),
+            "custo_computacao": float(custo_computacao)
+        }
+        
+        if mac_address in instancias_existentes:
+            instancias_existentes[mac_address]["leituras"].append(leitura)
+        else:
+            arquivo["instancias"].append({
+                "mac_address": mac_address,
+                "leituras": [leitura]
+            })
+        
+    s3_client.put_object(
+        Bucket=bucket_name,
+        Key=file_key,
+        Body=json.dumps(arquivo, ensure_ascii=False, indent=4).encode("utf-8"),
+        ContentType="application/json",
+    )
 
 #==========================================================================================================================================================================
 #BRONZE2SILVER
@@ -245,7 +284,7 @@ def uploadToGold():
         response = getHistoricalFile(nomeGold)
         
         if response:
-            addToHistoricalFile(nomeGold, response)
+            addToHistoricalFile(nomeGold, dados, response)
         else:
             createHistoricalFile(nomeEmpresa, dados)
     
