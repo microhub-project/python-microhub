@@ -25,14 +25,21 @@ cursor = conexao.cursor()
 s3_client = session.client("s3")
 bucket_name = os.getenv("bucket")
 
+def macToString(mac_address):
+    return mac_address.upper().replace(':', '_')
+
+def tupleToString(mac_address):
+    mac_address = ' '.join(mac_address)
+    return mac_address.upper().replace(':', '_')
+
+def stringToMac(mac_address):
+    return mac_address.upper().replace('_', ':')
+
 #==========================================================================================================================================================================
 #BRONZE2SILVER
 #==========================================================================================================================================================================
 
-def formatMACAddress(mac_address):
-    return mac_address.upper().replace(':', '_')
-
-def dataCleaning(mac_address):
+def b2s(mac_address):
     file_key1 = f"01-raw-bronze/{mac_address}.csv"
     
     try:
@@ -61,6 +68,8 @@ def dataCleaning(mac_address):
         df_collect["timestamp"] = df_collect["timestamp"].apply(pd.to_datetime, errors="coerce")
 
         nome_arquivo = df_collect.loc[0, "user"]
+        
+        nome_arquivo = macToString(nome_arquivo)
 
         timestamp_arquivo = df_collect.loc[0, "timestamp"]
 
@@ -81,7 +90,114 @@ def dataCleaning(mac_address):
     except:
         print("Não foram encontradas leituras da instância de endereço MAC ", mac_address)
 
+#==========================================================================================================================================================================
+#SILVER2GOLD
+#==========================================================================================================================================================================
 
+dados_por_empresa = {}
+
+def s2g(mac_address):
+    cursor.execute(
+        "SELECT BIN_TO_UUID(e.uuid), e.nome_fantasia "
+        "FROM empresa e "
+        "JOIN microsservico mc ON mc.empresa_uuid = e.uuid "
+        "JOIN instancia i ON i.microsservico_uuid = mc.uuid "
+        f"WHERE i.endereco_mac = '{mac_address}';"
+    )
+
+    empresa = cursor.fetchone()
+
+    empresaId, nomeEmpresa = empresa
+    
+    if nomeEmpresa not in dados_por_empresa:
+        dados_por_empresa[nomeEmpresa] = {
+            "instancias": [],
+            "componentesPorInstancia": {},
+        }
+
+    cursor.execute(
+        "SELECT c.nome_tecnico "
+        "FROM instancia_tem_componente ic "
+        "JOIN componente c ON c.uuid = ic.componente_uuid "
+        "JOIN instancia i ON i.uuid = ic.instancia_uuid "
+        f"WHERE i.endereco_mac = '{mac_address}'"
+    )
+
+    componentesLista = []
+
+    componentes = cursor.fetchall()
+
+    for componente in componentes:
+        componentesLista.append(componente[0])
+
+    nomeArquivo = macToString(mac_address)
+    file_key2 = f"02-trusted-silver/{nomeArquivo}.csv"
+    
+    try:
+        resposta = s3_client.get_object(Bucket=bucket_name, Key=file_key2)
+    except Exception as e:
+        print(f"Arquivo não encontrado para a instância {mac_address} no bucket silver: {e}")
+        return
+
+    df = pd.read_csv(io.BytesIO(resposta["Body"].read()), sep=",", low_memory=False)
+
+    manterDf = []
+    for componente in componentesLista:
+        if componente in df:
+            manterDf.append(componente)
+
+    valoresFinais = df[manterDf].apply(pd.to_numeric, errors="coerce").max()
+
+    dataFinal = df.loc[0, "timestamp"]
+
+    instanciaArquivo = {"mac_address": mac_address}
+    comp_empresa = dados_por_empresa[nomeEmpresa]["componentesPorInstancia"]
+
+    for componente, valor in valoresFinais.items():
+        val_float = round(float(valor), 2)
+        instanciaArquivo[componente] = val_float
+        comp_empresa.setdefault(componente, []).append(val_float)
+
+    instanciaArquivo["timestamp"] = dataFinal
+
+    dados_por_empresa[nomeEmpresa]["instancias"].append(instanciaArquivo)
+    
+def uploadToGold():
+    for nomeEmpresa, dados in dados_por_empresa.items():
+        mediasGerais = {}
+        for componente, valores in dados["componentesPorInstancia"].items():
+            mediasGerais[componente] = round(sum(valores) / len(valores), 2)
+
+        ultima_data = dados["instancias"][-1]["timestamp"]
+
+        jsonFinal = {
+            "empresa": nomeEmpresa,
+            "instancias": dados["instancias"],
+            "medias": mediasGerais,
+        }
+
+        nomeGold = nomeEmpresa.lower().replace(" ", "_")
+        file_key3 = f"03-client-gold/{nomeGold}.json"
+        file_key4 = f"03-client-gold/{nomeGold}_{ultima_data}.json"
+
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=file_key3,
+            Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
+            ContentType="application/json",
+        )
+
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=file_key4,
+            Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
+            ContentType="application/json",
+        )
+    
+# ==========================================================================================================================================================================
+# EXECUÇÃO
+# ==========================================================================================================================================================================
+    
 cursor.execute(
     f"SELECT endereco_mac FROM instancia i;"
 )
@@ -89,113 +205,13 @@ cursor.execute(
 macs = cursor.fetchall()
 
 for mac in macs:
-    mac = formatMACAddress(mac)
-    dataCleaning(mac)
-
-#==========================================================================================================================================================================
-#SILVER2GOLD
-#==========================================================================================================================================================================
-
-cursor.execute(
-    "SELECT BIN_TO_UUID(e.uuid), e.nome_fantasia "
-    "FROM empresa e "
-    "JOIN microsservico mc ON mc.empresa_uuid = e.uuid "
-    "JOIN instancia i ON i.microsservico_uuid = mc.uuid "
-    f"WHERE i.endereco_mac = '{nome_arquivo}'"
-)
-
-empresa = cursor.fetchone()
-
-empresaId, nomeEmpresa = empresa
-
-cursor.execute(
-    "SELECT i.endereco_mac "
-    "FROM instancia i "
-    "JOIN microsservico mc ON mc.uuid = i.microsservico_uuid "
-    f"WHERE mc.empresa_uuid = UUID_TO_BIN('{empresaId}')"
-)
-macsLista = []
-
-macs = cursor.fetchall()
-
-for mac in macs:
-    macsLista.append(mac[0])
-
-instancias = {}       
-componentesPorInstancia = {}
-data = 0
-
-for mac in macsLista:
-    cursor.execute(
-        "SELECT c.nome_tecnico "
-        "FROM instancia_tem_componente ic "
-        "JOIN componente c ON c.uuid = ic.componente_uuid "
-        "JOIN instancia i ON i.uuid = ic.instancia_uuid "
-        f"WHERE i.endereco_mac = '{mac}'"
-    )
-
-    componentesLista = []
-
-    componentes = cursor.fetchall()
-
-    for comp in componentes:
-        componentesLista.append(comp[0])
-
-    file_key2 = f"02-trusted-silver/{mac}.csv"
-
-    try:
-        resposta = s3_client.get_object(Bucket=bucket_name, Key=file_key2)
-    except s3_client.exceptions.NoSuchKey:
-        continue
-
-    df = pd.read_csv(io.BytesIO(resposta["Body"].read()), sep=",", low_memory=False)
-
-    manterDf = []
-    for comp in componentesLista:
-        if comp in df:
-            manterDf.append(comp)
-
-    valoresFinais = df[manterDf].apply(pd.to_numeric, errors="coerce").max()
-
-    dataFinal = df.loc[0, "timestamp"]
-
-    instanciaArquivo = {}
-
-    for componente, valor in valoresFinais.items():
-        instanciaArquivo[componente] = round(float(valor), 2)
-        componentesPorInstancia.setdefault(componente, []).append(float(valor))
-
-    instanciaArquivo["timestamp"] = dataFinal
-
-    instancias[mac] = instanciaArquivo
-
-mediasGerais = {}
-for componente, valores in componentesPorInstancia.items():
-    mediasGerais[componente] = round(sum(valores) / len(valores), 2)
-
-jsonFinal = {
-    "empresa": nomeEmpresa,
-    "instancias": instancias,
-    "medias": mediasGerais,
-}
-
-nomeGold = nomeEmpresa.lower().replace(" ", "_")
-file_key3 = f"03-client-gold/{nomeGold}.json"
-file_key4 = f"03-client-gold/{nomeGold}_{timestamp_arquivo}.json"
-
-s3_client.put_object(
-    Bucket=bucket_name,
-    Key=file_key3,
-    Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
-    ContentType="application/json",
-)
-
-s3_client.put_object(
-    Bucket=bucket_name,
-    Key=file_key4,
-    Body=json.dumps(jsonFinal, ensure_ascii=False, indent=4).encode("utf-8"),
-    ContentType="application/json",
-)
+    mac = tupleToString(mac)
+    b2s(mac)
+    
+    mac = stringToMac(mac)
+    s2g(mac)
+    
+uploadToGold()
 
 cursor.close()
 conexao.close()
