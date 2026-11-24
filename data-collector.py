@@ -1,8 +1,8 @@
-import psutil, time, csv, boto3, os
+import psutil, time, csv, os
 from datetime import datetime
 from getmac import get_mac_address
-from io import StringIO
 from dotenv import load_dotenv
+import requests
 
 mac_address = get_mac_address().upper().replace(':', "_")
 
@@ -59,7 +59,7 @@ def capture():
         exhibit([user, cpu_percent, cpu_frequency, ram_percent, swap_memory_percent, processes_qtd, processes_zombies_percent,upload_speed, download_speed, disk, timestamp])
         store([user, cpu_percent, cpu_frequency, ram_percent, swap_memory_percent,processes_qtd,processes_zombies_percent, upload_speed, download_speed, disk, timestamp])
 
-        time.sleep(9)
+        time.sleep(1)
         
     save(f'{mac_address}.csv')
 
@@ -104,19 +104,23 @@ with open(f'{mac_address}.csv', 'w', newline='') as csvfile:
 def save(file):
     load_dotenv()
 
-    session = boto3.Session(
-        aws_access_key_id=os.getenv("aws_access_key_id"),
-        aws_secret_access_key=os.getenv("aws_secret_access_key"),
-        aws_session_token=os.getenv("aws_session_token"),
-        region_name="us-east-1",
+    lambda_url = os.getenv("lambda_url")
+
+    with open(file, 'rb') as f:
+        conteudo = f.read()
+
+    print("Enviando arquivo para a Lambda...")
+    response = requests.post(
+        lambda_url,
+        params={'filename': file},
+        data=conteudo,
+        headers={'Content-Type': 'text/csv'},
+        timeout=120,
     )
 
-    s3_client = session.client("s3")
-    bucket_name = os.getenv("bucket")
-    
-    csv_buffer = StringIO()
-    
-    file_name = f"01-raw-bronze/{file}"
-    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    if response.status_code == 200:
+        print("Sucesso:", response.json())
+    else:
+        print(f"Erro {response.status_code}:", response.text)
 
 capture()
