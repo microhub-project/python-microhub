@@ -1,0 +1,113 @@
+{
+    "empresa": "MicroHub",
+    "instancias": [
+        {
+            "mac_address": "00:00:00:00:00:01",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:00:00:00:00:11",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:00:00:00:00:LU",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:00:00:00:11:11",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:00:00:00:12:12",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:00:00:00:OI:OI",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:1A:2B:3C:4D:5F",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "00:1A:2B:3C:4D:60",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "5C:CD:5B:BB:4E:18",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        },
+        {
+            "mac_address": "5C:CD:5B:BB:4E:19",
+            "ram_percent": 76.8,
+            "processes_qtd": 553.0,
+            "disk": 46.25,
+            "swap_memory_percent": 82.2,
+            "cpu_frequency": 3.5,
+            "cpu_percent": 18.2,
+            "timestamp": "2026-11-18 18:07:21.605225"
+        }
+    ],
+    "medias": {
+        "ram_percent": 76.8,
+        "processes_qtd": 553.0,
+        "disk": 46.25,
+        "swap_memory_percent": 82.2,
+        "cpu_frequency": 3.5,
+        "cpu_percent": 18.2
+    }
+}
