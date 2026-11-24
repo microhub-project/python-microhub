@@ -42,7 +42,7 @@ Após clonar o repositório, siga os passos abaixo para utilizar o sistema:
     ```
 3. Utilize o arquivo `.env.example` como base para criar **um novo arquivo** `.env` e preencher as variáveis de ambiente;
 4. Caso não possua o banco de dados populado, acesse o [diretório database](https://github.com/microhub-project/web-application/tree/main/src/database) do sistema web e execute os arquivos `db.sql` e `data.sql`;
-5. Caso necessite de dados de teste, o diretório `/data` possui arquivos de exemplo para cada uma das camadas do data lake.
+5. Caso necessite de dados de teste, o diretório `/data` possui arquivos de exemplo para cada uma das camadas do data lake;
 6. Ative o ambiente Python executando o comando abaixo;
     ```
     source /{CAMINHO_DO_PROJETO}/.venv/bin/activate
